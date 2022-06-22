@@ -1,5 +1,5 @@
 <h1>
-everyday-utils <a href="https://npmjs.org/package/everyday-utils"><img src="https://img.shields.io/badge/npm-v0.0.1-F00.svg?colorA=000"/></a> <a href="src"><img src="https://img.shields.io/badge/loc-65-FFF.svg?colorA=000"/></a> <a href="https://cdn.jsdelivr.net/npm/everyday-utils@0.0.1/dist/everyday-utils.min.js"><img src="https://img.shields.io/badge/brotli-560b-333.svg?colorA=000"/></a> <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-F0B.svg?colorA=000"/></a>
+everyday-utils <a href="https://npmjs.org/package/everyday-utils"><img src="https://img.shields.io/badge/npm-v0.0.2-F00.svg?colorA=000"/></a> <a href="src"><img src="https://img.shields.io/badge/loc-65-FFF.svg?colorA=000"/></a> <a href="https://cdn.jsdelivr.net/npm/everyday-utils@0.0.2/dist/everyday-utils.min.js"><img src="https://img.shields.io/badge/brotli-560b-333.svg?colorA=000"/></a> <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-F0B.svg?colorA=000"/></a>
 </h1>
 
 <p></p>
