@@ -1,7 +1,6 @@
 {
   "indentWidth": 2,
   "incremental": true,
-  "lineWidth": 85,
   "typescript": {
     "arguments.trailingCommas": "never",
     "arrowFunction.useParentheses": "preferNone",
