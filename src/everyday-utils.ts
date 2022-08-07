@@ -4,7 +4,7 @@ export * from 'deep-mutate-object'
 export * from 'pick-omit'
 export { default as isEqual } from './is-equal'
 
-import type { Chunk, StringOf } from 'everyday-types'
+import type { Chunk, Fn, StringOf } from 'everyday-types'
 
 export const chunk = <T, L extends number>(arr: T[], size: L): Chunk<T, L>[] => {
   return Array.from({ length: Math.ceil(arr.length / size) | 0 }, (_, i) => {
@@ -33,8 +33,7 @@ export const accessors = <S, T>(
   target: T,
   source: S,
   fn: (key: StringOf<keyof S>, value: S[StringOf<keyof S>]) => PropertyDescriptor,
-  filter: (key: StringOf<keyof S>, value: S[StringOf<keyof S>]) => boolean = () =>
-    true,
+  filter: (key: StringOf<keyof S>, value: S[StringOf<keyof S>]) => boolean = () => true,
 ) => {
   const prevDesc = new Map()
   Object.defineProperties(
@@ -93,8 +92,7 @@ export const accessors = <S, T>(
   }
 }
 
-export const kebab = (s: string) =>
-  s.replace(/[a-z](?=[A-Z])|[A-Z]+(?=[A-Z][a-z])/g, '$&-').toLowerCase()
+export const kebab = (s: string) => s.replace(/[a-z](?=[A-Z])|[A-Z]+(?=[A-Z][a-z])/g, '$&-').toLowerCase()
 
 export const styleToCss = (style: CSSStyleDeclaration) => {
   let css = ''
@@ -129,8 +127,7 @@ export const asyncSerialReduce = async <T, U>(
   return prev
 }
 
-export const wait = (ms: number) =>
-  new Promise<void>(resolve => setTimeout(resolve, ms))
+export const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
 
 export const tick = () => Promise.resolve()
 
@@ -163,12 +160,9 @@ export const chainSync = (...args: (() => any)[]) => (() => {
 })
 
 export const shallowEqual = (a: object, b: object) =>
-  [[a, b], [b, a]].every(([a, b]) =>
-    entries(a).every(([key, value]) => key in b && b[key] == value)
-  )
+  [[a, b], [b, a]].every(([a, b]) => entries(a).every(([key, value]) => key in b && b[key] == value))
 
-export const getOwnProperty = (object: object, name: string) =>
-  Object.getOwnPropertyDescriptor(object, name)?.value
+export const getOwnProperty = (object: object, name: string) => Object.getOwnPropertyDescriptor(object, name)?.value
 
 export const padCenter = (str: string | number, length: number) => {
   const strLength = getStringLength(str)
@@ -195,8 +189,7 @@ export const stripAnsi = (str: string | number) =>
   // eslint-disable-next-line no-control-regex
   str.toString().replace(/\u001b\[\d+m/g, '')
 
-export const includesAny = (str: string, predicates: string[]) =>
-  predicates.some(p => str.includes(p))
+export const includesAny = (str: string, predicates: string[]) => predicates.some(p => str.includes(p))
 
 export const asyncFilter = async <T>(
   array: T[],
@@ -227,15 +220,13 @@ export const defineProperty = toFluent(
 )
 
 export const filterMap = <T, U>(
-  array: T[],
-  fn: (item: T, index: number, array: T[]) => U | false | null | undefined,
+  array: T[] | readonly T[],
+  fn: (item: T, index: number, array: T[] | readonly T[]) => U | false | null | undefined,
 ) => array.map(fn).filter(Boolean) as U[]
 
-export const sortCompare = (a: number | string, b: number | string) =>
-  a < b ? -1 : a > b ? 1 : 0
+export const sortCompare = (a: number | string, b: number | string) => a < b ? -1 : a > b ? 1 : 0
 
-export const sortCompareKeys = ([a]: [string, any], [b]: [string, any]) =>
-  a < b ? -1 : a > b ? 1 : 0
+export const sortCompareKeys = ([a]: [string, any], [b]: [string, any]) => a < b ? -1 : a > b ? 1 : 0
 
 export const sortObjectInPlace = <T extends Record<string, any>>(data: T) => {
   const sorted = Object.fromEntries(
@@ -245,3 +236,14 @@ export const sortObjectInPlace = <T extends Record<string, any>>(data: T) => {
   Object.assign(data, sorted)
   return data
 }
+
+export const splitAt = (string: string, index: number) => [string.slice(0, index), string.slice(index + 1)] as const
+
+export const memoize = <P extends unknown[], R>(
+  fn: Fn<P, R>,
+  map = Object.create(null),
+) =>
+  function(this: unknown, ...args: P): R {
+    const serialized = args.join()
+    return map[serialized] ?? (map[serialized] = fn.apply(this, args))
+  } as Fn<P, R>
