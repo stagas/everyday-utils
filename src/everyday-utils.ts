@@ -247,3 +247,49 @@ export const memoize = <P extends unknown[], R>(
     const serialized = args.join()
     return map[serialized] ?? (map[serialized] = fn.apply(this, args))
   } as Fn<P, R>
+
+export interface Deferred<T> {
+  hasSettled: boolean
+  promise: Promise<T>
+  when: (fn: () => void) => void
+  resolve: (value: T) => void
+  reject: (error?: Error) => void
+  value?: T
+  error?: Error
+}
+
+export const Deferred = <T>() => {
+  const _onwhen = () => {
+    deferred.hasSettled = true
+    deferred.resolve = deferred.reject = noop
+  }
+
+  const noop = () => {}
+
+  let onwhen = noop
+
+  const deferred = {
+    hasSettled: false,
+    when: fn => {
+      onwhen = () => {
+        _onwhen()
+        fn()
+      }
+    },
+  } as Deferred<T>
+
+  deferred.promise = new Promise<T>((resolve, reject) => {
+    deferred.resolve = arg => {
+      onwhen()
+      deferred.value = arg
+      resolve(arg)
+    }
+    deferred.reject = error => {
+      onwhen()
+      deferred.error = error
+      reject(error)
+    }
+  })
+
+  return deferred
+}
