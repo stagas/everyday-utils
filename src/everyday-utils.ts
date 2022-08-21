@@ -293,3 +293,17 @@ export const Deferred = <T>() => {
 
   return deferred
 }
+
+export function KeyedCache<T, U extends unknown[]>(getter: (key: string, ...args: U) => Promise<T>) {
+  const cache = new Map<string, Deferred<T>>()
+  async function get(key: string, ...args: U): Promise<T> {
+    let deferred = cache.get(key)
+    if (deferred == null) {
+      cache.set(key, deferred = Deferred())
+      getter(key, ...args).then(deferred.resolve).catch(deferred.resolve)
+    }
+    return deferred.promise
+  }
+  get.cache = cache
+  return get
+}
