@@ -13,23 +13,33 @@ export const chunk = <T, L extends number>(arr: T[], size: L): Chunk<T, L>[] => 
   }) as Chunk<T, L>[]
 }
 
-export const entries = <
-  K extends keyof T,
+export function entries<K extends keyof T,
   V extends T[K],
-  T extends { [s: string]: any } | ArrayLike<any>,
->(obj: T): readonly [K, V][] => Object.entries(obj) as unknown as readonly [K, V][]
+  T extends { [s: string]: any }>(obj: T): readonly [K, V][]
+export function entries<K extends keyof T,
+  V extends T[K],
+  T extends ArrayLike<any>>(obj: T): readonly [K, V][]
+export function entries<K extends keyof T,
+  V extends T[K],
+  T extends { [s: string]: any } | ArrayLike<any>>(obj: T): readonly [K, V][] {
+  return Object.entries(obj) as unknown as readonly [K, V][]
+}
 
-export const keys = <
-  K extends keyof T,
-  T extends { [s: string]: any } | ArrayLike<any>,
->(obj: T): readonly K[] => Object.keys(obj) as unknown as readonly K[]
+export function keys<K extends keyof T,
+  T extends { [s: string]: any }>(obj: T): readonly K[]
+export function keys<K extends keyof T,
+  T extends ArrayLike<any>>(obj: T): readonly K[]
+export function keys<K extends keyof T,
+  T extends { [s: string]: any } | ArrayLike<any>>(obj: T): readonly K[] {
+  return Object.keys(obj) as unknown as readonly K[]
+}
 
 export const fromEntries = <K extends string, V>(entries: readonly [K, V][]) =>
   Object.fromEntries(entries) as Record<K, V>
 
-export const cheapRandomId = () => (Math.random() * 10e7 | 0).toString(36)
+export const cheapRandomId = () => `${String.fromCharCode(97 + Math.random() * 25)}${(Math.random() * 10e7 | 0).toString(36)}`
 
-export const accessors = <S, T>(
+export const accessors = <S extends { [s: string]: any }, T>(
   target: T,
   source: S,
   fn: (key: StringOf<keyof S>, value: S[StringOf<keyof S>]) => PropertyDescriptor,
@@ -146,6 +156,10 @@ export const colorHash = (string: string, minColorHex = '888') => {
   return color
 }
 
+export function colorOf(id: string, sat = 100, lum = 65) {
+  return `hsl(${(Math.round(parseInt(id, 36) / 25) * 25) % 360}, ${sat}%, ${lum}%)`
+}
+
 export const removeFromArray = <T>(arr: T[], el: T, quiet = false): T[] | void => {
   const index = arr.indexOf(el)
   if (!~index) {
@@ -222,7 +236,7 @@ export const defineProperty = toFluent(
 export const filterMap = <T, U>(
   array: T[] | readonly T[],
   fn: (item: T, index: number, array: T[] | readonly T[]) => U | false | null | undefined,
-) => array.map(fn).filter(Boolean) as U[]
+) => array.map(fn).filter(x => x != null && x !== false) as U[]
 
 export const sortCompare = (a: number | string, b: number | string) => a < b ? -1 : a > b ? 1 : 0
 
@@ -243,7 +257,7 @@ export const memoize = <P extends unknown[], R>(
   fn: Fn<P, R>,
   map = Object.create(null),
 ) =>
-  function(this: unknown, ...args: P): R {
+  function (this: unknown, ...args: P): R {
     const serialized = args.join()
     return map[serialized] ?? (map[serialized] = fn.apply(this, args))
   } as Fn<P, R>
@@ -264,7 +278,7 @@ export const Deferred = <T>() => {
     deferred.resolve = deferred.reject = noop
   }
 
-  const noop = () => {}
+  const noop = () => { }
 
   let onwhen = noop
 
@@ -307,3 +321,117 @@ export function KeyedCache<T, U extends unknown[]>(getter: (key: string, ...args
   get.cache = cache
   return get
 }
+
+export type Promised<T, U extends unknown[] = unknown[]> = (...args: U) => Promise<T>
+
+export const promisify = (fn: any) => {
+  return function (this: any, ...args: any[]) {
+    return new Promise<any>((resolve, reject) => {
+      fn.call(this, ...args, (err: any, ...data: any[]) => {
+        if (err) reject(err)
+        else resolve(data)
+      })
+    })
+  }
+}
+
+export class MapSet<K, V> {
+  #map = new Map<K, Set<V>>()
+
+  set(key: K, value: any) {
+    if (this.#map.has(key)) {
+      const set = this.#map.get(key)!
+      set.add(value)
+      return set.size
+    } else {
+      this.#map.set(key, new Set([value]))
+      return 1
+    }
+  }
+
+  get(key: K) {
+    return this.#map.get(key)
+  }
+
+  delete(key: K, value: any) {
+    return this.#map.get(key)?.delete(value) ?? false
+  }
+
+  has(key: K, value: any) {
+    return this.#map.get(key)?.has(value) ?? false
+  }
+
+  clear() {
+    return this.#map.clear()
+  }
+
+  get size() {
+    return this.#map.size
+  }
+}
+
+export class MapMap<KA, KB, V> {
+  #map = new Map<KA, Map<KB, V>>()
+
+  set(keyA: KA, keyB: KB, value: any) {
+    if (this.#map.has(keyA)) {
+      const map = this.#map.get(keyA)!
+      map.set(keyB, value)
+      return map.size
+    } else {
+      this.#map.set(keyA, new Map([[keyB, value]]))
+      return 1
+    }
+  }
+
+  get(keyA: KA, keyB: KB) {
+    return this.#map.get(keyA)?.get(keyB)
+  }
+
+  delete(keyA: KA, keyB: KB) {
+    return this.#map.get(keyA)?.delete(keyB) ?? false
+  }
+
+  has(keyA: KA, keyB: KB) {
+    return this.#map.has(keyA) && this.#map.get(keyA)!.has(keyB)
+  }
+
+  clear() {
+    return this.#map.clear()
+  }
+}
+
+export class MapMapSet<KA, KB, V> {
+  #map = new Map<KA, MapSet<KB, V>>()
+
+  set(keyA: KA, keyB: KB, value: any) {
+    if (this.#map.has(keyA)) {
+      const map = this.#map.get(keyA)!
+      map.set(keyB, value)
+      return map.size
+    } else {
+      const map = new MapSet<KB, V>()
+      map.set(keyB, value)
+      this.#map.set(keyA, map)
+      return 1
+    }
+  }
+
+  get(keyA: KA, keyB: KB) {
+    return this.#map.get(keyA)?.get(keyB)
+  }
+
+  delete(keyA: KA, keyB: KB, value: any) {
+    return this.#map.get(keyA)?.delete(keyB, value) ?? false
+  }
+
+  has(keyA: KA, keyB: KB, value: any) {
+    return this.#map.has(keyA) && this.#map.get(keyA)!.has(keyB, value)
+  }
+
+  clear() {
+    return this.#map.clear()
+  }
+}
+
+export const mutable = <T>(array: readonly T[]) => array as T[]
