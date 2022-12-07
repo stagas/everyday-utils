@@ -1,12 +1,16 @@
 import { bool, toFluent } from 'to-fluent'
 
+export * from 'to-fluent'
 export * from 'deep-mutate-object'
 export * from 'pick-omit'
+
+export * from './rgb'
+export * from './eventemitter'
 export { default as isEqual } from './is-equal'
 
-import type { Chunk, Fn, StringOf } from 'everyday-types'
+import type { Chunk, Class, Fn, StringOf } from 'everyday-types'
 
-export const chunk = <T, L extends number>(arr: T[], size: L): Chunk<T, L>[] => {
+export function chunk<T, L extends number>(arr: T[], size: L): Chunk<T, L>[] {
   return Array.from({ length: Math.ceil(arr.length / size) | 0 }, (_, i) => {
     const pos: number = i * size
     return arr.slice(pos, pos + size)
@@ -34,17 +38,18 @@ export function keys<K extends keyof T,
   return Object.keys(obj) as unknown as readonly K[]
 }
 
-export const fromEntries = <K extends string, V>(entries: readonly [K, V][]) =>
-  Object.fromEntries(entries) as Record<K, V>
+export function fromEntries<K extends string, V>(entries: readonly [K, V][]) {
+  return Object.fromEntries(entries) as Record<K, V>
+}
 
-export const cheapRandomId = () => `${String.fromCharCode(97 + Math.random() * 25)}${(Math.random() * 10e7 | 0).toString(36)}`
+export function cheapRandomId() {
+  return `${String.fromCharCode(97 + Math.random() * 25)}${(Math.random() * 10e7 | 0).toString(36)}`
+}
 
-export const accessors = <S extends { [s: string]: any }, T>(
-  target: T,
+export function accessors<S extends { [s: string]: any }, T>(target: T,
   source: S,
   fn: (key: StringOf<keyof S>, value: S[StringOf<keyof S>]) => PropertyDescriptor,
-  filter: (key: StringOf<keyof S>, value: S[StringOf<keyof S>]) => boolean = () => true,
-) => {
+  filter: (key: StringOf<keyof S>, value: S[StringOf<keyof S>]) => boolean = () => true) {
   const prevDesc = new Map()
   Object.defineProperties(
     target,
@@ -52,7 +57,7 @@ export const accessors = <S extends { [s: string]: any }, T>(
       (entries(source)
         .filter(([key]) => typeof key === 'string') as [
           StringOf<keyof S>,
-          S[StringOf<keyof S>],
+          S[StringOf<keyof S>]
         ][])
         .filter(([key, value]) => filter(key, value))
         .map(
@@ -102,23 +107,25 @@ export const accessors = <S extends { [s: string]: any }, T>(
   }
 }
 
-export const kebab = (s: string) => s.replace(/[a-z](?=[A-Z])|[A-Z]+(?=[A-Z][a-z])/g, '$&-').toLowerCase()
+export function kebab(s: string) {
+  return s.replace(/[a-z](?=[A-Z])|[A-Z]+(?=[A-Z][a-z])/g, '$&-').toLowerCase()
+}
 
-export const styleToCss = (style: CSSStyleDeclaration) => {
+export function styleToCss(style: CSSStyleDeclaration) {
   let css = ''
   for (const key in style)
-    css += style[key]
+    css += (style[key] != null && (style as any)[key] !== false)
       ? kebab(key) + ':' + style[key] + ';'
       : ''
   return css
 }
 
-export const shuffle = <T>(arr: T[]): T[] => arr.sort(() => Math.random() - 0.5)
+export function shuffle<T>(arr: T[]): T[] {
+  return arr.sort(() => Math.random() - 0.5)
+}
 
-export const asyncSerialMap = async <T, U>(
-  arr: T[],
-  fn: (item: T, index: number, arr: T[]) => Promise<U>,
-): Promise<U[]> => {
+export async function asyncSerialMap<T, U>(arr: T[],
+  fn: (item: T, index: number, arr: T[]) => Promise<U>): Promise<U[]> {
   const results: U[] = []
   for (const [i, item] of arr.entries()) {
     results.push(await fn(item, i, arr))
@@ -126,32 +133,29 @@ export const asyncSerialMap = async <T, U>(
   return results
 }
 
-export const asyncSerialReduce = async <T, U>(
-  arr: T[],
+export async function asyncSerialReduce<T, U>(arr: T[],
   fn: (prev: U, next: T, index: number, arr: T[]) => Promise<U>,
-  prev: U,
-): Promise<U> => {
+  prev: U): Promise<U> {
   for (const [i, item] of arr.entries()) {
     prev = await fn(prev, item, i, arr)
   }
   return prev
 }
 
-export const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
+export function wait(ms: number) {
+  return new Promise<void>(resolve => setTimeout(resolve, ms))
+}
 
-export const tick = () => Promise.resolve()
+export function tick() {
+  return Promise.resolve()
+}
 
-export const colorHash = (string: string, minColorHex = '888') => {
+export function colorHash(string: string, minColorHex = '888') {
   const minColor = parseInt(minColorHex, 16)
 
-  const color = (
-    (
-      (string.split('').reduce(
-        (p, n) => p + (n.charCodeAt(0) << 5),
-        0
-      ) | 0) % (4096 - minColor)
-    ) + minColor
-  ).toString(16).padStart(3, '0')
+  const color = ((
+    (checksum(string) | 0) % (4096 - minColor)
+  ) + minColor).toString(16).padStart(3, '0')
 
   return color
 }
@@ -160,58 +164,92 @@ export function colorOf(id: string, sat = 100, lum = 65) {
   return `hsl(${(Math.round(parseInt(id, 36) / 25) * 25) % 360}, ${sat}%, ${lum}%)`
 }
 
-export const removeFromArray = <T>(arr: T[], el: T, quiet = false): T[] | void => {
+export function ansiColorFor(string: string) {
+  const [r, g, b] = colorHash(string).split('').map(x => parseInt(x + x, 16))
+  return `\x1B[38;2;${r};${g};${b}m${string}`
+}
+
+export function removeFromArray<T>(arr: T[], el: T, quiet = false): T[] | void {
   const index = arr.indexOf(el)
   if (!~index) {
-    if (quiet) return
+    if (quiet)
+      return
     throw new ReferenceError('Item to be removed does not exist in the array.')
   }
   return arr.splice(index, 1)
 }
 
-export const chainSync = (...args: (() => any)[]) => (() => {
-  for (const fn of args) fn()
-})
+export function chainSync(...args: (() => any)[]) {
+  return (() => {
+    for (const fn of args)
+      fn()
+  })
+}
 
-export const shallowEqual = (a: object, b: object) =>
-  [[a, b], [b, a]].every(([a, b]) => entries(a).every(([key, value]) => key in b && b[key] == value))
+export function shallowEqual(a: object, b: object) {
+  return [[a, b], [b, a]].every(([a, b]) => entries(a).every(([key, value]) => key in b && b[key] == value))
+}
 
-export const getOwnProperty = (object: object, name: string) => Object.getOwnPropertyDescriptor(object, name)?.value
+export function shallowEqualArray(a: unknown, b: unknown) {
+  if (!Array.isArray(a) || !Array.isArray(b)) return false
+  if (a.length === b.length) {
+    if (a.every((x, i) => x === b[i])) {
+      return true
+    }
+  }
+  return false
+}
 
-export const padCenter = (str: string | number, length: number) => {
+export function getOwnProperty(object: object, name: string) {
+  return Object.getOwnPropertyDescriptor(object, name)?.value
+}
+
+export function padCenter(str: string | number, length: number) {
   const strLength = getStringLength(str)
   const padLength = Math.floor((length - strLength) / 2)
   return repeatString(' ', length - strLength - padLength) + str
     + repeatString(' ', padLength)
 }
 
-export const getStringLength = (str: string | number) => stripAnsi(str).length
+export function getStringLength(str: string | number) {
+  return stripAnsi(str).length
+}
 
-export const padStart = (str: string | number, length: number, char = ' ') => {
+export function padStart(str: string | number, length: number, char = ' ') {
   const strLength = getStringLength(str)
   return repeatString(char, length - strLength) + str
 }
 
-export const repeatString = (s: string, x: number) => s.repeat(Math.max(0, x))
+export function padEnd(str: string | number, length: number, char = ' ') {
+  const strLength = getStringLength(str)
+  return str + repeatString(char, length - strLength)
+}
+
+export function repeatString(s: string, x: number) {
+  return s.repeat(Math.max(0, x))
+}
 
 // const padEnd = (str: string, length: number) => {
 //   const ansiLength = stripAnsi(str).length
 //   return str + ' '.repeat(Math.max(0, length - ansiLength))
 // }
 
-export const stripAnsi = (str: string | number) =>
-  // eslint-disable-next-line no-control-regex
-  str.toString().replace(/\u001b\[\d+m/g, '')
+export function stripAnsi(str: string | number) {
+  return str.toString() // `\x1B[38;2;${r};${g};${b}m${string}`
+    // eslint-disable-next-line no-control-regex
+    .replace(/\u001b\[38;2;\d+;\d+;\d+m|\u001b\[\d+m/g, '')
+}
 
-export const includesAny = (str: string, predicates: string[]) => predicates.some(p => str.includes(p))
+export function includesAny(str: string, predicates: string[]) {
+  return predicates.some(p => str.includes(p))
+}
 
-export const asyncFilter = async <T>(
-  array: T[],
-  fn: (item: T) => Promise<boolean>,
-) =>
-  (await Promise.all(
-    array.map(async x => [x, await fn(x)] as const)
+export async function asyncFilter<T>(array: T[],
+  fn: (item: T) => Promise<boolean>) {
+  return (await Promise.all(
+    array.map(async (x) => [x, await fn(x)] as const)
   )).filter(([, truth]) => truth).map(([x]) => x)
+}
 
 export const defineProperty = toFluent(
   class {
@@ -233,34 +271,40 @@ export const defineProperty = toFluent(
       )
 )
 
-export const filterMap = <T, U>(
-  array: T[] | readonly T[],
-  fn: (item: T, index: number, array: T[] | readonly T[]) => U | false | null | undefined,
-) => array.map(fn).filter(x => x != null && x !== false) as U[]
+export function filterMap<T, U>(array: T[] | readonly T[],
+  fn: (item: T, index: number, array: T[] | readonly T[]) => U | false | null | undefined) {
+  return array.map(fn).filter(x => x != null && x !== false) as U[]
+}
 
-export const sortCompare = (a: number | string, b: number | string) => a < b ? -1 : a > b ? 1 : 0
+export function sortCompare(a: number | string, b: number | string) {
+  return a < b ? -1 : a > b ? 1 : 0
+}
 
-export const sortCompareKeys = ([a]: [string, any], [b]: [string, any]) => a < b ? -1 : a > b ? 1 : 0
+export function sortCompareKeys([a]: [string, any], [b]: [string, any]) {
+  return a < b ? -1 : a > b ? 1 : 0
+}
 
-export const sortObjectInPlace = <T extends Record<string, any>>(data: T) => {
+export function sortObjectInPlace<T extends Record<string, any>>(data: T) {
   const sorted = Object.fromEntries(
     Object.entries(data).sort(sortCompareKeys)
   )
-  for (const key in data) delete data[key]
+  for (const key in data)
+    delete data[key]
   Object.assign(data, sorted)
   return data
 }
 
-export const splitAt = (string: string, index: number) => [string.slice(0, index), string.slice(index + 1)] as const
+export function splitAt(string: string, index: number) {
+  return [string.slice(0, index), string.slice(index + 1)] as const
+}
 
-export const memoize = <P extends unknown[], R>(
-  fn: Fn<P, R>,
-  map = Object.create(null),
-) =>
-  function (this: unknown, ...args: P): R {
+export function memoize<P extends unknown[], R>(fn: Fn<P, R>,
+  map = Object.create(null)) {
+  return function (this: unknown, ...args: P): R {
     const serialized = args.join()
     return map[serialized] ?? (map[serialized] = fn.apply(this, args))
   } as Fn<P, R>
+}
 
 export interface Deferred<T> {
   hasSettled: boolean
@@ -272,7 +316,7 @@ export interface Deferred<T> {
   error?: Error
 }
 
-export const Deferred = <T>() => {
+export function Deferred<T>() {
   const _onwhen = () => {
     deferred.hasSettled = true
     deferred.resolve = deferred.reject = noop
@@ -324,12 +368,14 @@ export function KeyedCache<T, U extends unknown[]>(getter: (key: string, ...args
 
 export type Promised<T, U extends unknown[] = unknown[]> = (...args: U) => Promise<T>
 
-export const promisify = (fn: any) => {
+export function promisify(fn: any) {
   return function (this: any, ...args: any[]) {
     return new Promise<any>((resolve, reject) => {
       fn.call(this, ...args, (err: any, ...data: any[]) => {
-        if (err) reject(err)
-        else resolve(data)
+        if (err)
+          reject(err)
+        else
+          resolve(data)
       })
     })
   }
@@ -337,6 +383,49 @@ export const promisify = (fn: any) => {
 
 export class MapSet<K, V> {
   #map = new Map<K, Set<V>>()
+
+  add(key: K, value: any) {
+    if (this.#map.has(key)) {
+      const set = this.#map.get(key)!
+      set.add(value)
+      return set.size
+    } else {
+      this.#map.set(key, new Set([value]))
+      return 1
+    }
+  }
+
+  values() {
+    return [...this.#map.values()].flatMap((set) => [...set])
+  }
+
+  get(key: K) {
+    return this.#map.get(key)
+  }
+
+  delete(key: K, value: any) {
+    return this.#map.get(key)?.delete(value) ?? false
+  }
+
+  has(key: K, value: any) {
+    return this.#map.get(key)?.has(value) ?? false
+  }
+
+  hasKey(key: K) {
+    return this.#map.has(key)
+  }
+
+  clear() {
+    return this.#map.clear()
+  }
+
+  get size() {
+    return this.#map.size
+  }
+}
+
+export class WeakMapSet<K extends object, V> {
+  #map = new WeakMap<K, Set<V>>()
 
   set(key: K, value: any) {
     if (this.#map.has(key)) {
@@ -359,14 +448,6 @@ export class MapSet<K, V> {
 
   has(key: K, value: any) {
     return this.#map.get(key)?.has(value) ?? false
-  }
-
-  clear() {
-    return this.#map.clear()
-  }
-
-  get size() {
-    return this.#map.size
   }
 }
 
@@ -404,14 +485,14 @@ export class MapMap<KA, KB, V> {
 export class MapMapSet<KA, KB, V> {
   #map = new Map<KA, MapSet<KB, V>>()
 
-  set(keyA: KA, keyB: KB, value: any) {
+  add(keyA: KA, keyB: KB, value: any) {
     if (this.#map.has(keyA)) {
       const map = this.#map.get(keyA)!
-      map.set(keyB, value)
+      map.add(keyB, value)
       return map.size
     } else {
       const map = new MapSet<KB, V>()
-      map.set(keyB, value)
+      map.add(keyB, value)
       this.#map.set(keyA, map)
       return 1
     }
@@ -434,4 +515,176 @@ export class MapMapSet<KA, KB, V> {
   }
 }
 
-export const mutable = <T>(array: readonly T[]) => array as T[]
+export function mutable<T>(array: readonly T[]) {
+  return array as T[]
+}
+
+
+export class MapFactory<K, V extends object> extends Map<K, V> {
+  get(key: K, ...args: any[]) {
+    if (this.has(key)) {
+      return super.get(key)!
+    } else {
+      const value = new this.ctor(key, ...(args.length ? args : this.defaultArgs))
+      this.set(key, value)
+      return value
+    }
+  }
+
+  ctor: Class<V>
+
+  constructor(json: { entries: readonly [K, V][], ctor: Class<V> })
+  constructor(ctor: Class<V>, defaultData?: Partial<V>)
+  constructor(
+    ctorOrJson: Class<V> | { entries: readonly [K, V][], ctor: Class<V> },
+    public defaultArgs = []
+  ) {
+    if (typeof ctorOrJson === 'object') {
+      super(ctorOrJson.entries)
+      this.ctor = ctorOrJson.ctor
+    } else {
+      super()
+      this.ctor = ctorOrJson
+    }
+  }
+
+  toJSON() {
+    return {
+      entries: [...this],
+      ctor: this.ctor
+    }
+  }
+}
+
+export class WeakMapFactory<K extends object, V extends object> extends WeakMap<K, V> {
+  get(key: K, ...args: any[]) {
+    if (this.has(key)) {
+      return super.get(key)!
+    } else {
+      const value = new this.ctor(key, ...(args.length ? args : this.defaultArgs))
+      this.set(key, value)
+      return value
+    }
+  }
+
+  constructor(
+    public ctor: Class<V>,
+    public defaultArgs = []
+  ) {
+    super()
+  }
+}
+
+export function isClass(fn: any): boolean {
+  return fn?.toString().startsWith('class')
+}
+
+export function bindAll<T extends object, U extends object>(obj: T, target: T | U = obj): T & U {
+  return Object.assign(target,
+    Object.fromEntries(
+      filterMap(
+        entries(
+          Object
+            .getOwnPropertyDescriptors(
+              Object.getPrototypeOf(obj)
+            )
+        ),
+        ([key, desc]) =>
+          typeof desc.value === 'function'
+          && !isClass(desc.value)
+          && [key, desc.value.bind(obj)] as const
+      )
+    )
+  ) as T & U
+}
+
+export function once<T extends ((this: any, ...args: any[]) => any) | void>(fn: T): T {
+  if (!fn) return fn
+
+  let res: any
+  function wrap(this: any, ...args: any[]) {
+    const savefn = fn
+    // @ts-ignore
+    fn = void 0
+    res ??= savefn?.apply(this, args)
+    return res
+  }
+  return wrap as T
+}
+
+export function checksum(s: string) {
+  return s.split('').reduce((p, n) =>
+    (p << 1) + n.charCodeAt(0),
+    0
+  )
+}
+
+export function debugObjectMethods<T>(obj: T, ignoreKeys: string[] = [], hooks?: {
+  before: (key: string, args: any[], stackErr: Error) => void,
+  after: (key: string, args: any[], result: any) => void,
+}, name = 'anonymous'): T {
+  // @ts-ignore
+  const isDebug = !!globalThis.DEBUG
+  if (!isDebug) return obj
+
+  // @ts-ignore
+  const isOwnDebug = globalThis.DEBUG.includes(name)
+
+  class Stack extends Error {
+    constructor() {
+      super()
+      if (Error.captureStackTrace) {
+        Error.captureStackTrace(this, Stack);
+      }
+      this.name = 'StackError'
+    }
+  }
+
+  return Object.assign(obj as any,
+    Object.fromEntries(
+      Object.entries(obj as any)
+        .concat(
+          filterMap(
+            Object.getOwnPropertyNames(
+              // @ts-ignore
+              Object.getPrototypeOf(obj.__proto__) ?? {}
+            ), (key) =>
+            typeof (obj as any)[key] === 'function' && !(obj as any)[key].toString().startsWith('class') && [key, (obj as any)[key]])
+        ).filter(([key, fn]) =>
+          !ignoreKeys.includes(key) && typeof fn === 'function' && !fn.toString().startsWith('class')
+        ).map(([key, fn]: any) => {
+          const wrapped = function (this: any, ...args: any[]) {
+            // console.groupCollapsed(`\x1b[34m${prefix}:\t${key}(${args.length ? '...' : ''})`)
+
+            // console.warn(key)
+            if (isOwnDebug) {
+              hooks?.before?.(key, args, new Stack())
+            }
+
+            // console.warn('ARGS:\t', args)
+
+            const result = fn.apply(this, args)
+
+            // console.log('\x1b[0m\x1b[1mRESULT:\t', result)
+
+            if (isOwnDebug) {
+              hooks?.after?.(key, args, result)
+            }
+
+            // console.groupEnd()
+
+            return result
+          }
+
+          Object.defineProperty(wrapped, 'name', { value: `${key} (wrap)` })
+          Object.defineProperty(fn, 'name', { value: key })
+          Object.assign(fn, { key })
+          // if (fn) Object.defineProperty(fn, 'key', {
+          //   value: key,
+          //   enumerable: false
+          // })
+
+          return [key, wrapped]
+        })
+    ))
+}

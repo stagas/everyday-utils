@@ -4,7 +4,7 @@
 /* HELPERS */
 
 const getKeys = Object.keys
-const hasOwnProperty = Object.prototype.hasOwnProperty
+// const hasOwnProperty = Object.prototype.hasOwnProperty
 const isArray = Array.isArray
 
 /* MAIN */
@@ -13,6 +13,11 @@ const isEqual = (x: any, y: any): boolean => {
   if (x === y) return true
 
   if (typeof x === 'object' && typeof y === 'object' && x !== null && y !== null) {
+    if (x.constructor !== y.constructor) return false
+
+    if (x instanceof Map || x instanceof Set) x = [...x]
+    if (y instanceof Map || y instanceof Set) y = [...y]
+
     if (isArray(x)) {
       if (isArray(y)) {
         let xLength = x.length
@@ -45,7 +50,7 @@ const isEqual = (x: any, y: any): boolean => {
 
         if (!isEqual(xValue, yValue)) return false
 
-        if (yValue === undefined && !hasOwnProperty.call(y, key)) return false
+        if (yValue === undefined && !Object.hasOwn(y, key)) return false
       }
     }
 
