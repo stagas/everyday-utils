@@ -614,7 +614,7 @@ export function once<T extends ((this: any, ...args: any[]) => any) | void>(fn: 
 
 export function checksum(s: string) {
   return s.split('').reduce((p, n) =>
-    (p << 1) + n.charCodeAt(0),
+    ((p + n.charCodeAt(0)) ** 1.9) % Number.MAX_SAFE_INTEGER,
     0
   )
 }
