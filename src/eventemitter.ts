@@ -14,8 +14,29 @@ export type Off = () => void
  * A EventEmitter work like node/event
  */
 export class EventEmitter<E extends EventEmitterBaseEventMap> {
-  static onceSymbol = Symbol('once');
-  private listeners = {} as Record<keyof E, EventEmitterListenerItem[]>;
+  #listeners = {} as Record<keyof E, EventEmitterListenerItem[]>;
+
+  get listeners() {
+    return this.#listeners
+  }
+
+  set listeners(listeners: Record<keyof E, EventEmitterListenerItem[]>) {
+    this.#listeners = Object.fromEntries(
+      Object.entries(
+        listeners
+      ).map(([id, listeners]) =>
+        [id, listeners.filter((listener) =>
+          listener.callback != null
+        )]
+      ).filter(([, listeners]) =>
+        listeners.length
+      )
+    )
+  }
+
+  constructor(data?: Partial<EventEmitter<any>>) {
+    Object.assign(this, data)
+  }
 
   /**
    * Send Event to all listener
@@ -50,6 +71,8 @@ export class EventEmitter<E extends EventEmitterBaseEventMap> {
     callback: E[K],
     options?: EventEmitterOptions
   ): Off {
+    if (!callback) return () => { }
+
     if (!this.listeners[eventName]) {
       this.listeners[eventName] = [];
     }
@@ -97,8 +120,6 @@ export class EventEmitter<E extends EventEmitterBaseEventMap> {
    * @param callback Event Callback
    */
   once<K extends keyof E>(eventName: K, callback: E[K]) {
-    this.on(eventName, callback, { once: true });
-
-    return this;
+    return this.on(eventName, callback, { once: true });
   }
 }
