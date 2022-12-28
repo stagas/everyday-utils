@@ -704,3 +704,9 @@ export function attempt(x: () => void) {
     console.warn(error)
   }
 }
+
+export function noop() { }
+
+export function modWrap(x: number, N: number) {
+  return (x % N + N) % N
+}
