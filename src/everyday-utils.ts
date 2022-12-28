@@ -191,6 +191,7 @@ export function shallowEqual(a: object, b: object) {
 }
 
 export function shallowEqualArray(a: unknown, b: unknown) {
+  if (a === b) return true
   if (!Array.isArray(a) || !Array.isArray(b)) return false
   if (a.length === b.length) {
     if (a.every((x, i) => x === b[i])) {
