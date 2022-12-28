@@ -396,6 +396,10 @@ export class MapSet<K, V> {
     }
   }
 
+  create(key: K) {
+    this.#map.set(key, new Set())
+  }
+
   values() {
     return [...this.#map.values()].flatMap((set) => [...set])
   }
