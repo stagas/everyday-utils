@@ -617,11 +617,14 @@ export function once<T extends ((this: any, ...args: any[]) => any) | void>(fn: 
   return wrap as T
 }
 
-export function checksum(s: string) {
-  return s.split('').reduce((p, n) =>
-    ((p + n.charCodeAt(0)) ** 1.9) % Number.MAX_SAFE_INTEGER,
-    0
-  )
+// credits: chat-gpt
+export function checksum(str: string) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 6) - hash + str.charCodeAt(i);
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash)
 }
 
 export function debugObjectMethods<T>(obj: T, ignoreKeys: string[] = [], hooks?: {
