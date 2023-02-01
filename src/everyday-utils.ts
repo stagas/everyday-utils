@@ -697,11 +697,13 @@ export function debugObjectMethods<T>(obj: T, ignoreKeys: string[] = [], hooks?:
     ))
 }
 
-export function attempt(x: () => void) {
+export function attempt(x: () => void, quiet = false) {
   try {
     x()
   } catch (error) {
-    console.warn(error)
+    if (!quiet) {
+      console.warn(error)
+    }
   }
 }
 
