@@ -62,3 +62,78 @@ export function rgbToHsl([r, g, b]: RGB): HSL {
   }
   return [h, s, l];
 }
+
+export function luminate(color: string, amount: number): string {
+  // Convert the color from hex to RGB
+  const rgb = hexToRgb(color);
+
+  // Convert the RGB values to HSL
+  const hsl = rgbToHsl(rgb);
+
+  // Increase the lightness value by the specified amount
+  hsl[2] += amount;
+
+  // Clamp the lightness value between 0 and 1
+  hsl[2] = Math.max(0, Math.min(1, hsl[2]));
+
+  // Convert the HSL values back to RGB
+  const newRgb = hslToRgb(hsl);
+
+  // Convert the RGB values back to hex and return the result
+  return rgbToHex(newRgb);
+}
+
+export function saturate(color: string, amount: number): string {
+  // Convert the color from hex to RGB
+  const rgb = hexToRgb(color);
+
+  // Convert the RGB values to HSL
+  const hsl = rgbToHsl(rgb);
+
+  // Increase the saturation value by the specified amount
+  hsl[1] += amount;
+
+  // Clamp the saturation value between 0 and 1
+  hsl[1] = Math.max(0, Math.min(1, hsl[1]));
+
+  // Convert the HSL values back to RGB
+  const newRgb = hslToRgb(hsl);
+
+  // Convert the RGB values back to hex and return the result
+  return rgbToHex(newRgb);
+}
+
+export function hexToRgb(hex: string): RGB {
+  // Check if the hex string is in the short form (e.g. "#abc")
+  if (hex.length === 4) {
+    // Expand the short form hex string to the full form (e.g. "#aabbcc")
+    hex = hex
+      .split('')
+      .map((x) => `${x}${x}`)
+      .join('');
+  }
+
+  // Convert the hex string to an array of numbers
+  const hexValues = hex
+    .match(/[\da-f]{2}/gi)!.map((x) =>
+      Math.max(0, Math.min(1, parseInt(x, 16) / 255))
+    );
+
+  // Extract the red, green, and blue values from the hex array
+  const [r, g, b] = hexValues.slice(0, 3);
+
+  // Return the RGB values as an array
+  return [r, g, b];
+}
+
+export function rgbToHex(rgb: RGB): string {
+  // Convert the RGB values to hexadecimal strings
+  const hexValues = rgb.map((x) =>
+    Math.max(0, Math.min(255, Math.round(x * 255)))
+      .toString(16)
+      .padStart(2, '0')
+  );
+
+  // Concatenate the hex strings into a single string and return the result
+  return `#${hexValues.join('')}`;
+}
