@@ -46,6 +46,8 @@ export function cheapRandomId() {
   return `${String.fromCharCode(97 + Math.random() * 25)}${(Math.random() * 10e7 | 0).toString(36)}`
 }
 
+export const randomId = cheapRandomId
+
 export function accessors<S extends { [s: string]: any }, T>(target: T,
   source: S,
   fn: (key: StringOf<keyof S>, value: S[StringOf<keyof S>]) => PropertyDescriptor,
@@ -353,17 +355,41 @@ export function Deferred<T>() {
   return deferred
 }
 
-export function KeyedCache<T, U extends unknown[]>(getter: (key: string, ...args: U) => Promise<T>) {
-  const cache = new Map<string, Deferred<T>>()
-  async function get(key: string, ...args: U): Promise<T> {
-    let deferred = cache.get(key)
-    if (deferred == null) {
-      cache.set(key, deferred = Deferred())
-      getter(key, ...args).then(deferred.resolve).catch(deferred.resolve)
+export function KeyedCache<T, U extends unknown[], V extends string | number>(getter: (key: V, ...args: U) => Promise<T>, maxCacheSize = Infinity) {
+  const cache = new Map<V, { deferred: Deferred<T>, accessTime: number }>()
+
+  let accessTime = 0
+
+  const get = Object.assign(async function (key: V, ...args: U): Promise<T> {
+    let cacheItem = cache.get(key)
+
+    if (cacheItem == null) {
+      const deferred = Deferred<T>()
+
+      accessTime++
+
+      cache.set(key, cacheItem = { deferred, accessTime })
+
+      getter(key, ...args)
+        .then(deferred.resolve)
+        .catch(deferred.reject)
     }
-    return deferred.promise
-  }
-  get.cache = cache
+    else {
+      cacheItem.accessTime = accessTime++
+
+      if (cache.size > get.maxCacheSize) {
+        const [lruKey] = [...cache].sort(([, a], [, b]) => a.accessTime - b.accessTime)[0]
+
+        cache.delete(lruKey)
+      }
+    }
+
+    return cacheItem.deferred.promise
+  }, {
+    cache,
+    maxCacheSize
+  })
+
   return get
 }
 
@@ -383,49 +409,86 @@ export function promisify(fn: any) {
 }
 
 export class MapSet<K, V> {
-  #map = new Map<K, Set<V>>()
+  map = new Map<K, Set<V>>()
+
+  constructor(mapSet?: MapSet<K, V>, shallow?: boolean) {
+    if (mapSet) {
+      if (shallow) {
+        this.map = mapSet.map
+      }
+      else {
+        this.map = new Map([...mapSet.map.entries()]
+          .map(([key, set]) => [key, new Set(set)])
+        )
+      }
+    }
+  }
+
+  copy() {
+    return new MapSet(this)
+  }
+
+  shallowCopy() {
+    return new MapSet(this, true)
+  }
 
   add(key: K, value: any) {
-    if (this.#map.has(key)) {
-      const set = this.#map.get(key)!
+    if (this.map.has(key)) {
+      const set = this.map.get(key)!
       set.add(value)
       return set.size
     } else {
-      this.#map.set(key, new Set([value]))
+      this.map.set(key, new Set([value]))
       return 1
     }
   }
 
   create(key: K) {
-    this.#map.set(key, new Set())
+    this.map.set(key, new Set())
+  }
+
+  keys() {
+    return this.map.keys()
   }
 
   values() {
-    return [...this.#map.values()].flatMap((set) => [...set])
+    return [...this.map.values()].flatMap((set) => [...set])
+  }
+
+  entries() {
+    return [...this.map.entries()].flatMap(([key, set]) => [...set].map((v): [K, V] => [key, v]))
   }
 
   get(key: K) {
-    return this.#map.get(key)
+    return this.map.get(key)
+  }
+
+  sort(key: K, compareFn?: (a: V, b: V) => number) {
+    const set = this.map.get(key)
+    if (set) {
+      const items = [...set].sort(compareFn)
+      this.map.set(key, new Set(items))
+    }
   }
 
   delete(key: K, value: any) {
-    return this.#map.get(key)?.delete(value) ?? false
+    return this.map.get(key)?.delete(value) ?? false
   }
 
   has(key: K, value: any) {
-    return this.#map.get(key)?.has(value) ?? false
+    return this.map.get(key)?.has(value) ?? false
   }
 
   hasKey(key: K) {
-    return this.#map.has(key)
+    return this.map.has(key)
   }
 
   clear() {
-    return this.#map.clear()
+    return this.map.clear()
   }
 
   get size() {
-    return this.#map.size
+    return this.map.size
   }
 }
 

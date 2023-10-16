@@ -45,20 +45,18 @@ export class EventEmitter<E extends EventEmitterBaseEventMap> {
    */
   emit<K extends keyof E>(eventName: K, ...args: Parameters<E[K]>) {
     if (this.listeners[eventName]) {
-      try {
-        this.listeners[eventName].forEach((item) => {
-          if (typeof item.callback === 'function') {
-            item.callback(...args);
-          }
+      this.listeners[eventName].forEach((item) => {
+        if (typeof item.callback === 'function') {
+          item.callback(...args)
+        }
 
-          if (item.once === true) {
-            this.off(eventName, item.callback as E[K]);
-          }
-        });
-      } catch (e) { }
+        if (item.once === true) {
+          this.off(eventName, item.callback as E[K])
+        }
+      })
     }
 
-    return this;
+    return this
   }
 
   /**
